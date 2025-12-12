@@ -64,6 +64,14 @@ audit:
 	@echo 'Running tests...'
 	CGO_ENABLED=1 go test -race -vet=off ./...
 
+# ------------------------------------------------------------------ #
+#                          Database Script                           #
+# ------------------------------------------------------------------ #
+## db/up: run database instance
+.PHONY: db/up
+db/up:
+	@echo 'Starting database...'
+	@docker compose up -d
 
 # ------------------------------------------------------------------ #
 #                          Migration Script                          #
@@ -103,3 +111,4 @@ migrate/version:
 .PHONY: migrate/status
 migrate/status:
 	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=${TCSA_DB_DSN} goose --dir ./migrations status
+
