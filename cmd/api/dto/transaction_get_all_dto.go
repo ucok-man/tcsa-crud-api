@@ -2,8 +2,8 @@ package dto
 
 type TransactionGetAllDTO struct {
 	Pagination struct {
-		Page     int `validate:"omitempty,min=0,max=1000"`
-		PageSize int `validate:"omitempty,min=0,max=100"`
+		Page     int `validate:"omitempty,min=1,max=1000"`
+		PageSize int `validate:"omitempty,min=1,max=100"`
 		Limit    *int
 		Offset   *int
 	}

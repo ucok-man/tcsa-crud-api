@@ -7,6 +7,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/stdlib"
+	"github.com/ucok-man/tcsa/internal/data"
 	"github.com/ucok-man/tcsa/internal/tlog"
 )
 
@@ -15,8 +16,8 @@ const VERSION = "1.0.0"
 type application struct {
 	config Config
 	logger *tlog.Logger
-	// models data.Models
-	wg sync.WaitGroup
+	models data.Models
+	wg     sync.WaitGroup
 }
 
 func main() {
@@ -39,6 +40,7 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
 
 	err = app.serve()

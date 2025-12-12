@@ -13,12 +13,17 @@ func (app *application) routes() http.Handler {
 	ec.JSONSerializer = serializer.New()
 	ec.Validator = validator.New()
 	ec.Logger = app.logger
-	// ec.HTTPErrorHandler
+	ec.HTTPErrorHandler = app.HTTPErrorHandler
 
 	ec.Use(app.withRecover())
 	ec.Use(app.withRequestLogger())
 
 	ec.GET("/healthcheck", app.healthcheckHandler)
+
+	transactions := ec.Group("/transactions")
+	{
+		transactions.POST("", app.createTransactionHandler)
+	}
 
 	return ec
 }

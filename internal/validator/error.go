@@ -1,8 +1,11 @@
 package validator
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/ucok-man/tcsa/internal/utility"
 )
 
 type ValidationErrorMap map[string]string
@@ -31,4 +34,19 @@ func (e ValidationErrorMap) Error() string {
 	}
 
 	return builder.String()
+}
+
+func (e ValidationErrorMap) MarshalJSON() ([]byte, error) {
+	// Convert to regular map to use default JSON encoding
+	m := map[string]string(e)
+
+	formatted := map[string]string{}
+	for key, val := range m {
+		keys := strings.Split(key, ".")
+		keys = utility.SlicesMap(keys, strings.ToLower)
+		key = strings.Join(keys[1:], ".")
+
+		formatted[key] = val
+	}
+	return json.Marshal(formatted)
 }

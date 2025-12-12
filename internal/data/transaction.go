@@ -29,7 +29,7 @@ type Transaction struct {
 }
 
 type TransactionModel struct {
-	DB *sql.DB
+	db *sql.DB
 }
 
 func (m TransactionModel) Insert(transaction *Transaction) error {
@@ -42,7 +42,7 @@ func (m TransactionModel) Insert(transaction *Transaction) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	return m.DB.QueryRowContext(ctx, query, args...).Scan(
+	return m.db.QueryRowContext(ctx, query, args...).Scan(
 		&transaction.ID,
 		&transaction.Version,
 		&transaction.CreatedAt,
@@ -72,7 +72,7 @@ func (m TransactionModel) GetAll(dto dto.TransactionGetAllDTO) ([]*Transaction, 
 
 	args := []any{dto.Filter.Status, dto.Pagination.Limit, dto.Pagination.Offset}
 
-	rows, err := m.DB.QueryContext(ctx, query, args...)
+	rows, err := m.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, Metadata{}, err
 	}
@@ -123,7 +123,7 @@ func (m TransactionModel) Get(id int) (*Transaction, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+	err := m.db.QueryRowContext(ctx, query, id).Scan(
 		&transaction.ID,
 		&transaction.UserId,
 		&transaction.Amount,
@@ -163,7 +163,7 @@ func (m TransactionModel) Update(transaction *Transaction) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&transaction.Version)
+	err := m.db.QueryRowContext(ctx, query, args...).Scan(&transaction.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -184,7 +184,7 @@ func (m TransactionModel) Delete(id int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	result, err := m.DB.ExecContext(ctx, query, id)
+	result, err := m.db.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}

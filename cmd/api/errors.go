@@ -8,6 +8,62 @@ import (
 	"github.com/ucok-man/tcsa/internal/tlog"
 )
 
+func (app *application) HTTPErrorHandler(err error, ctx echo.Context) {
+	if ctx.Response().Committed {
+		return
+	}
+
+	var response struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+		Details any    `json:"details,omitempty"`
+	}
+
+	if he, ok := err.(*echo.HTTPError); ok {
+		response.Code = http.StatusText(he.Code)
+		switch he.Code {
+		case http.StatusUnprocessableEntity:
+			response.Message = "unable proccess request because some malformed input"
+			response.Details = he.Message
+
+		// Change default notfound and method not allowed.
+		case http.StatusNotFound:
+			response.Message = "the requested resource could not be found"
+		case http.StatusMethodNotAllowed:
+			response.Message = fmt.Sprintf("the %s method is not supported for this resource", ctx.Request().Method)
+		default:
+			response.Message = fmt.Sprintf("%v", he.Message)
+		}
+
+		err = ctx.JSON(he.Code, envelope{"error": response})
+		if err != nil {
+			app.logger.Errorj(tlog.JSON{
+				"message": "error sending json response",
+				"error":   err,
+			})
+			ctx.Response().WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Uncaught Error
+	app.logger.Errorj(tlog.JSON{
+		"message": "unhandled error occured",
+		"error":   err,
+	})
+	response.Code = http.StatusText(http.StatusInternalServerError)
+	response.Message = "the server encountered a problem and could not process your request"
+	err = ctx.JSON(http.StatusInternalServerError, envelope{"error": response})
+	if err != nil {
+		app.logger.Errorj(tlog.JSON{
+			"message": "error sending json response",
+			"error":   err,
+		})
+		ctx.Response().WriteHeader(http.StatusInternalServerError)
+	}
+
+}
+
 func (app *application) ErrInternalServer(err error, message string, req *http.Request) error {
 	app.logger.Errorj(tlog.JSON{
 		"message": message,
