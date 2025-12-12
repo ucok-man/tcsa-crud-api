@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"go.uber.org/zap"
+	"github.com/ucok-man/tcsa/internal/tlog"
 )
 
 func (app *application) serve() error {
@@ -20,6 +21,7 @@ func (app *application) serve() error {
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
+		ErrorLog:     stdlog.New(app.logger, "", 0),
 	}
 
 	shutdownError := make(chan error)
@@ -31,19 +33,19 @@ func (app *application) serve() error {
 		// Blocking until receive quit signal
 		s := <-quit
 
-		app.logger.Info("shutting down server", zap.String("signal", s.String()))
+		app.logger.Infoj(tlog.JSON{"message": "shutting down server", "signal": s.String()})
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		shutdownError <- srv.Shutdown(ctx)
-		app.logger.Info("completing background tasks", zap.String("addr", srv.Addr))
+		app.logger.Infoj(tlog.JSON{"message": "completing background tasks", "addr": srv.Addr})
 
 		app.wg.Wait()
 		shutdownError <- nil
 	}()
 
-	app.logger.Info("starting server", zap.String("addr", srv.Addr), zap.String("env", app.config.Env))
+	app.logger.Infoj(tlog.JSON{"message": "starting server", "addr": srv.Addr, "env": app.config.Env})
 
 	err := srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
@@ -55,6 +57,6 @@ func (app *application) serve() error {
 		return err
 	}
 
-	app.logger.Info("stopped server", zap.String("addr", srv.Addr))
+	app.logger.Info(tlog.JSON{"message": "server stopped", "addr": srv.Addr})
 	return nil
 }

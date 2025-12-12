@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"database/sql"
-	"log"
 	"sync"
 	"time"
 
 	_ "github.com/jackc/pgx/stdlib"
-	"go.uber.org/zap"
+	"github.com/ucok-man/tcsa/internal/tlog"
 )
+
+const VERSION = "1.0.0"
 
 type application struct {
 	config Config
-	logger *zap.Logger
+	logger *tlog.Logger
 	// models data.Models
 	wg sync.WaitGroup
 }
@@ -21,19 +22,17 @@ type application struct {
 func main() {
 	cfg, err := NewConfig()
 	if err != nil {
-		log.Fatal(err)
 	}
 
-	logger := zap.Must(zap.NewProduction())
+	logger := tlog.Must(tlog.NewProduction())
 	if cfg.Env != "production" {
-		logger = zap.Must(zap.NewDevelopment())
+		logger = tlog.Must(tlog.NewDevelopment())
 	}
 	defer logger.Sync()
 
 	db, err := openDB(cfg)
 	if err != nil {
-		logger.Fatal("Failed to open database connection", zap.Error(err))
-
+		logger.Fatalj(tlog.JSON{"message": "failed connecting to database", "err": err})
 	}
 	defer db.Close()
 
@@ -44,7 +43,7 @@ func main() {
 
 	err = app.serve()
 	if err != nil {
-		logger.Fatal("Server has error occured", zap.Error(err))
+		logger.Fatalj(tlog.JSON{"message": "server has error occured", "error": err})
 	}
 }
 
