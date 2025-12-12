@@ -1,8 +1,6 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/ucok-man/tcsa/internal/tlog"
@@ -11,11 +9,11 @@ import (
 
 func (app *application) withRecover() echo.MiddlewareFunc {
 	return middleware.RecoverWithConfig(middleware.RecoverConfig{
-		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
-			c.Logger().Error("Recovering from panic",
+		LogErrorFunc: func(ctx echo.Context, err error, stack []byte) error {
+			ctx.Logger().Error("Recovering from panic",
 				zap.Error(err),
-				zap.Any("url", c.Request().URL),
-				zap.String("method", c.Request().Method),
+				zap.Any("url", ctx.Request().URL),
+				zap.String("method", ctx.Request().Method),
 			)
 			return err
 		},
@@ -32,30 +30,27 @@ func (app *application) withRequestLogger() echo.MiddlewareFunc {
 		LogResponseSize: true,
 		LogError:        true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			var message string
 			switch {
+			case v.Status >= 300 && v.Status <= 399:
+				message = "Redirect"
+			case v.Status >= 400 && v.Status <= 499:
+				message = "Client Error"
 			case v.Status >= 500:
-				c.Logger().Errorj(tlog.JSON{
-					"message":       http.StatusText(v.Status),
-					"code":          v.Status,
-					"method":        v.Method,
-					"url":           v.URI,
-					"ip_addr":       v.RemoteIP,
-					"response_time": v.Latency,
-					"response_size": v.ResponseSize,
-					"error":         v.Error,
-				})
+				message = "Server Error"
 			default:
-				c.Logger().Infoj(tlog.JSON{
-					"message":       http.StatusText(v.Status),
-					"code":          v.Status,
-					"method":        v.Method,
-					"url":           v.URI,
-					"ip_addr":       v.RemoteIP,
-					"response_time": v.Latency,
-					"response_size": v.ResponseSize,
-				})
-
+				message = "Success"
 			}
+
+			c.Logger().Infoj(tlog.JSON{
+				"message":       message,
+				"code":          v.Status,
+				"method":        v.Method,
+				"url":           v.URI,
+				"ip_addr":       v.RemoteIP,
+				"response_time": v.Latency,
+				"response_size": v.ResponseSize,
+			})
 
 			return nil
 		},
