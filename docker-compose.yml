@@ -13,7 +13,8 @@ services:
       TCSA_DB_MAX_IDLE_TIME: 15m
       TCSA_LOG_LEVEL: info
     depends_on:
-      - tcsa_postgres
+      tcsa_postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   tcsa_postgres:
