@@ -59,3 +59,9 @@ func (app *application) withRequestLogger() echo.MiddlewareFunc {
 		},
 	})
 }
+
+func (app *application) withCORS() echo.MiddlewareFunc {
+	return middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: app.config.Cors.TrustedOrigins,
+	})
+}

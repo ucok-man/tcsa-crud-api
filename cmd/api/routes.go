@@ -16,6 +16,7 @@ func (app *application) routes() http.Handler {
 	ec.HTTPErrorHandler = app.HTTPErrorHandler
 
 	ec.Use(app.withRecover())
+	ec.Use(app.withCORS())
 	ec.Use(app.withRequestLogger())
 
 	// Documentation routes
