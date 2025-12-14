@@ -65,6 +65,9 @@ func (app *application) HTTPErrorHandler(err error, ctx echo.Context) {
 		"message": "unhandled error occured",
 		"error":   err,
 	})
+	ctx.Response().Status = 500
+	ctx.Response().WriteHeader(500)
+
 	response.Code = http.StatusText(http.StatusInternalServerError)
 	response.Message = "the server encountered a problem and could not process your request"
 	err = ctx.JSON(http.StatusInternalServerError, envelope{"error": response})
@@ -79,7 +82,8 @@ func (app *application) HTTPErrorHandler(err error, ctx echo.Context) {
 }
 
 func (app *application) ErrInternalServer(err error, message string, req *http.Request) error {
-	app.logger.Errorj(tlog.JSON{
+	logger := app.logger.WithSkipCaller(1)
+	logger.Errorj(tlog.JSON{
 		"message": message,
 		"path":    req.URL,
 		"method":  req.Method,

@@ -32,7 +32,7 @@ func NewLogger(logger *zap.Logger) *Logger {
 }
 
 func NewProduction() (*Logger, error) {
-	logger, err := zap.NewProduction()
+	logger, err := zap.NewProduction(zap.AddCallerSkip(1))
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func NewProduction() (*Logger, error) {
 }
 
 func NewDevelopment() (*Logger, error) {
-	logger, err := zap.NewDevelopment()
+	logger, err := zap.NewDevelopment(zap.AddCallerSkip(1))
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +91,17 @@ func (l *Logger) SetLevel(v log.Lvl) {
 }
 
 func (l *Logger) SetHeader(h string) {}
+
+func (l *Logger) WithSkipCaller(skip int) *Logger {
+	logger := l.logger.WithOptions(zap.AddCallerSkip(skip))
+	return &Logger{
+		logger: logger,
+		sugar:  logger.Sugar(),
+		level:  log.INFO,
+		output: os.Stdout,
+	}
+
+}
 
 // shouldLog checks if the message should be logged based on level
 func (l *Logger) shouldLog(lvl log.Lvl) bool {
