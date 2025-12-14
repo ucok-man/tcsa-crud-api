@@ -40,12 +40,17 @@ func (app *application) createTransactionHandler(ctx echo.Context) error {
 }
 
 func (app *application) getByIdTransactionHandler(ctx echo.Context) error {
-	transactionId, err := app.GetParamId(ctx)
-	if err != nil {
+	var dto dto.TransactionParamIdDTO
+
+	if err := ctx.Bind(&dto); err != nil {
 		return app.ErrBadRequest(err.Error())
 	}
 
-	transaction, err := app.models.Transactions.GetById(transactionId)
+	if err := ctx.Validate(&dto); err != nil {
+		return app.ErrFailedValidation(err)
+	}
+
+	transaction, err := app.models.Transactions.GetById(dto.TransactionId)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
@@ -59,12 +64,17 @@ func (app *application) getByIdTransactionHandler(ctx echo.Context) error {
 }
 
 func (app *application) removeByIdTransactionHandler(ctx echo.Context) error {
-	transactionId, err := app.GetParamId(ctx)
-	if err != nil {
+	var dto dto.TransactionParamIdDTO
+
+	if err := ctx.Bind(&dto); err != nil {
 		return app.ErrBadRequest(err.Error())
 	}
 
-	transaction, err := app.models.Transactions.GetById(transactionId)
+	if err := ctx.Validate(&dto); err != nil {
+		return app.ErrFailedValidation(err)
+	}
+
+	transaction, err := app.models.Transactions.GetById(dto.TransactionId)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
@@ -85,11 +95,6 @@ func (app *application) removeByIdTransactionHandler(ctx echo.Context) error {
 }
 
 func (app *application) updateByIdTransactionHandler(ctx echo.Context) error {
-	transactionId, err := app.GetParamId(ctx)
-	if err != nil {
-		return app.ErrBadRequest(err.Error())
-	}
-
 	var dto dto.TransactionUpdateDTO
 
 	if err := ctx.Bind(&dto); err != nil {
@@ -100,7 +105,7 @@ func (app *application) updateByIdTransactionHandler(ctx echo.Context) error {
 		return app.ErrFailedValidation(err)
 	}
 
-	transaction, err := app.models.Transactions.GetById(transactionId)
+	transaction, err := app.models.Transactions.GetById(dto.TransactionId)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):

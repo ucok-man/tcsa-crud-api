@@ -6,8 +6,9 @@ type TransactionCreateDTO struct {
 }
 
 type TransactionUpdateDTO struct {
-	Amount *int    `json:"amount" validate:"omitempty,min=0"`
-	Status *string `json:"status" validate:"omitempty,oneof=pending failed success"`
+	TransactionId int     `param:"id" validate:"required,min=1"`
+	Amount        *int    `json:"amount" validate:"omitempty,min=0"`
+	Status        *string `json:"status" validate:"omitempty,oneof=pending failed success"`
 }
 
 type TransactionGetAllDTO struct {
@@ -25,4 +26,8 @@ type TransactionGetAllDTO struct {
 	Filter struct {
 		Status *string `query:"status" validate:"omitempty,oneof=pending failed success"`
 	}
+}
+
+type TransactionParamIdDTO struct {
+	TransactionId int `param:"id" validate:"required,min=1"`
 }
