@@ -40,7 +40,7 @@ func (app *application) createTransactionHandler(ctx echo.Context) error {
 }
 
 func (app *application) getByIdTransactionHandler(ctx echo.Context) error {
-	transactionId, err := app.getParamId(ctx)
+	transactionId, err := app.GetParamId(ctx)
 	if err != nil {
 		return app.ErrBadRequest(err.Error())
 	}
@@ -59,7 +59,7 @@ func (app *application) getByIdTransactionHandler(ctx echo.Context) error {
 }
 
 func (app *application) removeByIdTransactionHandler(ctx echo.Context) error {
-	transactionId, err := app.getParamId(ctx)
+	transactionId, err := app.GetParamId(ctx)
 	if err != nil {
 		return app.ErrBadRequest(err.Error())
 	}
@@ -85,7 +85,7 @@ func (app *application) removeByIdTransactionHandler(ctx echo.Context) error {
 }
 
 func (app *application) updateByIdTransactionHandler(ctx echo.Context) error {
-	transactionId, err := app.getParamId(ctx)
+	transactionId, err := app.GetParamId(ctx)
 	if err != nil {
 		return app.ErrBadRequest(err.Error())
 	}
@@ -129,4 +129,37 @@ func (app *application) updateByIdTransactionHandler(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, envelope{"transaction": transaction})
+}
+
+func (app *application) getAllTransactionHandler(ctx echo.Context) error {
+	var dto dto.TransactionGetAllDTO
+
+	// Set Default Value
+	dto.Pagination.Page = app.IntPtr(1)
+	dto.Pagination.PageSize = app.IntPtr(10)
+	dto.Sort.RawValue = app.StringPtr("id")
+
+	if err := ctx.Bind(&dto); err != nil {
+		return app.ErrBadRequest(err.Error())
+	}
+
+	if err := ctx.Validate(&dto); err != nil {
+		return app.ErrFailedValidation(err)
+	}
+
+	dto.Pagination.Limit = dto.Pagination.PageSize
+	dto.Pagination.Offset = app.PageOffset(*dto.Pagination.Page, *dto.Pagination.PageSize)
+	dto.Sort.Direction = app.SortDirection(*dto.Sort.RawValue)
+	dto.Sort.ColumnValue = app.SortColumn(*dto.Sort.RawValue)
+
+	transactions, metadata, err := app.models.Transactions.GetAll(dto)
+	if err != nil {
+		return app.ErrInternalServer(err, "failed get all transactions", ctx.Request())
+	}
+
+	if transactions == nil {
+		transactions = []*data.Transaction{}
+	}
+
+	return ctx.JSON(http.StatusOK, envelope{"transactions": transactions, "metadata": metadata})
 }

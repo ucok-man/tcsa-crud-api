@@ -22,11 +22,11 @@ func (app *application) routes() http.Handler {
 
 	transactions := ec.Group("/transactions")
 	{
+		transactions.GET("", app.getAllTransactionHandler)
 		transactions.POST("", app.createTransactionHandler)
 		transactions.GET("/:id", app.getByIdTransactionHandler)
 		transactions.PUT("/:id", app.updateByIdTransactionHandler)
 		transactions.DELETE("/:id", app.removeByIdTransactionHandler)
-
 	}
 
 	return ec

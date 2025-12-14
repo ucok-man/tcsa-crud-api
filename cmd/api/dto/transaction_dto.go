@@ -12,17 +12,17 @@ type TransactionUpdateDTO struct {
 
 type TransactionGetAllDTO struct {
 	Pagination struct {
-		Page     int `validate:"omitempty,min=1,max=1000"`
-		PageSize int `validate:"omitempty,min=1,max=100"`
+		Page     *int `query:"page" validate:"omitempty,min=1,max=1000"`
+		PageSize *int `query:"page_size" validate:"omitempty,min=1,max=100"`
 		Limit    *int
 		Offset   *int
 	}
 	Sort struct {
-		RawValue    string `validate:"omitempty,oneof=amount status created_at -amount -status -created_at ''"`
+		RawValue    *string `query:"sort_by" validate:"omitempty,oneof=id amount status created_at -id -amount -status -created_at"`
 		ColumnValue *string
 		Direction   *string
 	}
 	Filter struct {
-		Status string `validate:"omitempty,oneof=pending failed success ''"`
+		Status *string `query:"status" validate:"omitempty,oneof=pending failed success"`
 	}
 }

@@ -51,18 +51,20 @@ func (m TransactionModel) Insert(transaction *Transaction) error {
 }
 
 func (m TransactionModel) GetAll(dto dto.TransactionGetAllDTO) ([]*Transaction, Metadata, error) {
+	// Pagination must be set
 	if dto.Pagination.Limit == nil || dto.Pagination.Offset == nil {
 		return nil, Metadata{}, fmt.Errorf("unset pagination limit or offset value")
 	}
 
-	if dto.Sort.RawValue != "" && (dto.Sort.Direction == nil || dto.Sort.ColumnValue == nil) {
+	// Sort must be set
+	if dto.Sort.Direction == nil || dto.Sort.ColumnValue == nil {
 		return nil, Metadata{}, fmt.Errorf("unset sort direction or columnValue")
 	}
 
 	query := fmt.Sprintf(`
 	    SELECT count(*) OVER(), id, user_id, amount, status, version, created_at, updated_at
 	    FROM transactions
-	    WHERE status = $1 OR $1 = ''
+	    WHERE status = $1 OR $1 IS NULL
 	    ORDER BY %s %s, id ASC
 	    LIMIT $2 OFFSET $3`, *dto.Sort.ColumnValue, *dto.Sort.Direction,
 	)
@@ -104,7 +106,7 @@ func (m TransactionModel) GetAll(dto dto.TransactionGetAllDTO) ([]*Transaction, 
 		return nil, Metadata{}, err
 	}
 
-	metadata := calculateMetadata(totalRecords, dto.Pagination.Page, dto.Pagination.PageSize)
+	metadata := calculateMetadata(totalRecords, *dto.Pagination.Page, *dto.Pagination.PageSize)
 	return transactions, metadata, nil
 }
 
