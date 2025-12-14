@@ -52,6 +52,27 @@ func NewConfig() (Config, error) {
 	pflag.String("log-level", "debug", "Log level (debug/info/warn/error)")
 	pflag.StringSlice("cors-trusted-origins", []string{}, "Trusted CORS origins (comma separated)")
 
+	pflag.Usage = func() {
+		w := pflag.CommandLine.Output()
+
+		fmt.Fprintf(w, "Usage of %s:\n\n", os.Args[0])
+
+		// Use PrintDefaults() to print the standard flag descriptions
+		fmt.Fprintln(w, "Options:")
+		pflag.PrintDefaults()
+
+		// Print any custom postamble
+		fmt.Fprintf(w, "\nEnvironment Variables:\n")
+		fmt.Fprintln(w, "      TCSA_PORT")
+		fmt.Fprintln(w, "      TCSA_ENV")
+		fmt.Fprintln(w, "      TCSA_DB_DSN")
+		fmt.Fprintln(w, "      TCSA_DB_MAX_OPEN_CONN")
+		fmt.Fprintln(w, "      TCSA_DB_MAX_IDLE_CONN")
+		fmt.Fprintln(w, "      TCSA_DB_MAX_IDLE_TIME")
+		fmt.Fprintln(w, "      TCSA_LOG_LEVEL")
+		fmt.Fprintln(w, "      TCSA_CORS_TRUSTED_ORIGINS")
+	}
+
 	pflag.Parse()
 
 	// Bind flags to Viper keys, flags override environment

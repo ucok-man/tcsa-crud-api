@@ -15,6 +15,11 @@ help:
 # ------------------------------------------------------------------ #
 #                             API SCRIPT                             #
 # ------------------------------------------------------------------ #
+## api/help: see all api option
+.PHONY: api/help
+api/help:
+	@go run ./cmd/api --help
+
 ## dev: run api in development mode
 .PHONY: dev
 dev:
