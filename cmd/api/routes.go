@@ -18,8 +18,15 @@ func (app *application) routes() http.Handler {
 	ec.Use(app.withRecover())
 	ec.Use(app.withRequestLogger())
 
+	// Documentation routes
+
+	ec.FileFS("/swagger.yaml", "docs/swagger.yaml", swaggerFile)
+	ec.GET("/docs", app.serveSwaggerUI)
+
+	// Health check
 	ec.GET("/healthcheck", app.healthcheckHandler)
 
+	// Transaction routes
 	transactions := ec.Group("/transactions")
 	{
 		transactions.GET("", app.getAllTransactionHandler)
@@ -29,6 +36,7 @@ func (app *application) routes() http.Handler {
 		transactions.DELETE("/:id", app.removeByIdTransactionHandler)
 	}
 
+	// Dashboard routes
 	dashboard := ec.Group("/dashboard")
 	{
 		dashboard.GET("/summary", app.summaryTransactionHandler)
