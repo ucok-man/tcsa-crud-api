@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ucok-man/tcsa/cmd/api/dto"
+	"github.com/ucok-man/tcsa/internal/utility"
 )
 
 type TransactionStatus string
@@ -26,6 +26,27 @@ type Transaction struct {
 	Version   int               `json:"-"`
 	CreatedAt time.Time         `json:"created_at"`
 	UpdatedAt time.Time         `json:"updated_at"`
+}
+
+type Summary struct {
+	CountTotal int `json:"total_transaction"`
+	Pending    struct {
+		Count          int     `json:"count"`
+		RatePercentage float64 `json:"rate_percentage"`
+	} `json:"pending"`
+	Success struct {
+		Count          int     `json:"count"`
+		RatePercentage float64 `json:"rate_percentage"`
+	} `json:"success"`
+	Failed struct {
+		Count          int     `json:"count"`
+		RatePercentage float64 `json:"rate_percentage"`
+	} `json:"failed"`
+}
+
+type TransactionSummary struct {
+	Transactions []*Transaction `json:"transactions"`
+	Summary      Summary        `json:"summary"`
 }
 
 type TransactionModel struct {
@@ -50,33 +71,44 @@ func (m TransactionModel) Insert(transaction *Transaction) error {
 	)
 }
 
-func (m TransactionModel) GetAll(dto dto.TransactionGetAllDTO) ([]*Transaction, Metadata, error) {
-	// Pagination must be set
-	if dto.Pagination.Limit == nil || dto.Pagination.Offset == nil {
-		return nil, Metadata{}, fmt.Errorf("unset pagination limit or offset value")
-	}
+type TransactionGetAllParam struct {
+	Page          int
+	PageSize      int
+	PageOffset    int
+	SortColumn    string
+	SortDirection string
+	FilterStatus  string
+	FilterUserId  int
+}
 
-	// Sort must be set
-	if dto.Sort.Direction == nil || dto.Sort.ColumnValue == nil {
-		return nil, Metadata{}, fmt.Errorf("unset sort direction or columnValue")
-	}
-
+func (m TransactionModel) GetAll(param TransactionGetAllParam) ([]*Transaction, *Metadata, error) {
 	query := fmt.Sprintf(`
-	    SELECT count(*) OVER(), id, user_id, amount, status, version, created_at, updated_at
+	    SELECT 
+			count(*) OVER() as total_count, 
+			id, user_id, amount, status, version, created_at, updated_at
 	    FROM transactions
-	    WHERE status = $1 OR $1 IS NULL
+	    WHERE 
+			(CASE 
+				WHEN $1 = '' THEN TRUE
+				ELSE status = $1
+			END)
+			AND
+			(CASE 
+				WHEN $2 = 0 THEN TRUE
+				ELSE user_id = $2
+			END)		
 	    ORDER BY %s %s, id ASC
-	    LIMIT $2 OFFSET $3`, *dto.Sort.ColumnValue, *dto.Sort.Direction,
+	    LIMIT $3 OFFSET $4`, param.SortColumn, param.SortDirection,
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	args := []any{dto.Filter.Status, dto.Pagination.Limit, dto.Pagination.Offset}
+	args := []any{param.FilterStatus, param.FilterUserId, param.PageSize, param.PageOffset}
 
 	rows, err := m.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, Metadata{}, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 
@@ -96,18 +128,18 @@ func (m TransactionModel) GetAll(dto dto.TransactionGetAllDTO) ([]*Transaction, 
 			&transaction.UpdatedAt,
 		)
 		if err != nil {
-			return nil, Metadata{}, err
+			return nil, nil, err
 		}
 
 		transactions = append(transactions, &transaction)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, Metadata{}, err
+		return nil, nil, err
 	}
 
-	metadata := calculateMetadata(totalRecords, *dto.Pagination.Page, *dto.Pagination.PageSize)
-	return transactions, metadata, nil
+	metadata := calculateMetadata(totalRecords, param.Page, param.PageSize)
+	return transactions, &metadata, nil
 }
 
 func (m TransactionModel) GetById(id int) (*Transaction, error) {
@@ -198,4 +230,99 @@ func (m TransactionModel) DeleteOne(id int) error {
 		return ErrRecordNotFound
 	}
 	return nil
+}
+
+type TransactionSummaryParam struct {
+	Page            int
+	PageSize        int
+	PageOffset      int
+	SortColumn      string
+	SortDirection   string
+	FilterDateRange int
+	FilterUserId    int
+}
+
+func (m TransactionModel) Summary(param TransactionSummaryParam) (*TransactionSummary, *Metadata, error) {
+	query := fmt.Sprintf(`
+    SELECT 
+        count(*) OVER() as total_count,
+        count(*) FILTER (WHERE status = 'success') OVER() as success_count,
+        count(*) FILTER (WHERE status = 'pending') OVER() as pending_count,
+        count(*) FILTER (WHERE status = 'failed') OVER() as failed_count,
+        id, user_id, amount, status, version, created_at, updated_at
+    FROM transactions
+    WHERE
+        (CASE 
+            WHEN $1 = 0 THEN TRUE
+            ELSE created_at >= CURRENT_DATE - INTERVAL '1 day' * ($1 - 1)
+        END) 
+        AND
+        (CASE 
+            WHEN $2 = 0 THEN TRUE
+            ELSE user_id = $2
+        END)
+    ORDER BY %s %s, id ASC
+    LIMIT $3 OFFSET $4`, param.SortColumn, param.SortDirection,
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	args := []any{param.FilterDateRange, param.FilterUserId, param.PageSize, param.PageOffset}
+
+	rows, err := m.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var summary Summary
+	var transactions []*Transaction
+
+	for rows.Next() {
+		var transaction Transaction
+		err := rows.Scan(
+			&summary.CountTotal,
+			&summary.Success.Count,
+			&summary.Pending.Count,
+			&summary.Failed.Count,
+			&transaction.ID,
+			&transaction.UserId,
+			&transaction.Amount,
+			&transaction.Status,
+			&transaction.Version,
+			&transaction.CreatedAt,
+			&transaction.UpdatedAt,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		transactions = append(transactions, &transaction)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	if summary.CountTotal > 0 {
+		summary.Success.RatePercentage = utility.Round2(
+			float64(summary.Success.Count) / float64(summary.CountTotal) * 100,
+		)
+
+		summary.Pending.RatePercentage = utility.Round2(
+			float64(summary.Pending.Count) / float64(summary.CountTotal) * 100,
+		)
+
+		summary.Failed.RatePercentage = utility.Round2(
+			float64(summary.Failed.Count) / float64(summary.CountTotal) * 100,
+		)
+	}
+
+	metadata := calculateMetadata(summary.CountTotal, param.Page, param.PageSize)
+
+	return &TransactionSummary{
+		Transactions: transactions,
+		Summary:      summary,
+	}, &metadata, err
 }

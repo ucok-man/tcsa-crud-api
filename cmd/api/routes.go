@@ -29,5 +29,10 @@ func (app *application) routes() http.Handler {
 		transactions.DELETE("/:id", app.removeByIdTransactionHandler)
 	}
 
+	dashboard := ec.Group("/dashboard")
+	{
+		dashboard.GET("/summary", app.summaryTransactionHandler)
+	}
+
 	return ec
 }
