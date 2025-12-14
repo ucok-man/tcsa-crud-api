@@ -32,6 +32,18 @@ start:
 	@echo 'starting bin/api...'
 	@./bin/api
 
+## test: run all test verbose with coverage
+.PHONY: test
+test:
+	@echo 'runing test...'
+	@go test -v -cover ./...
+
+## test: run all test with gotestdox
+.PHONY: test/doc
+test/doc:
+	@echo 'runing test...'
+	@gotestdox -v -cover ./...
+
 ## swag: generate swagger definition
 .PHONY: swag
 swag:
@@ -60,18 +72,30 @@ audit:
 	go mod verify
 	@echo 'Vetting code...'
 	go vet ./...
-	go tool staticcheck ./...
+	staticcheck ./...
 	@echo 'Running tests...'
-	CGO_ENABLED=1 go test -race -vet=off ./...
+	CGO_ENABLED=1 go test -race -vet=off -cover ./...
 
 # ------------------------------------------------------------------ #
 #                          Database Script                           #
 # ------------------------------------------------------------------ #
-## db/up: run database instance
+## db/up: run database container instance
 .PHONY: db/up
 db/up:
 	@echo 'Starting database...'
 	@docker compose up -d
+
+## db/down: remove database container instance
+.PHONY: db/down
+db/down:
+	@echo 'Removing database...'
+	@docker compose down
+
+## db/remove: remove database container instance include volume
+.PHONY: db/clean
+db/clean:
+	@echo 'Cleaning up database...'
+	@docker compose down -v
 
 # ------------------------------------------------------------------ #
 #                          Migration Script                          #
