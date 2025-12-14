@@ -2,12 +2,12 @@ package dto
 
 type TransactionCreateDTO struct {
 	UserId int `json:"user_id" validate:"required,min=1"`
-	Amount int `json:"amount" validate:"required,min=0"`
+	Amount int `json:"amount" validate:"required,min=1"`
 }
 
 type TransactionUpdateDTO struct {
 	TransactionId int     `param:"id" validate:"required,min=1"`
-	Amount        *int    `json:"amount" validate:"omitempty,min=0"`
+	Amount        *int    `json:"amount" validate:"omitempty,min=1"`
 	Status        *string `json:"status" validate:"omitempty,oneof=pending failed success"`
 }
 
